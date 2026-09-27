@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pedidos de Señales</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='6' fill='%232a78d6'/%3E%3Cpath d='M10 16h12M16 10v12' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <strong>Pedidos de Señales</strong>
+        <small>Operaciones · Marketing · Producción</small>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Secciones">
+      <a href="#/operaciones" data-view="operaciones">Operaciones</a>
+      <a href="#/marketing" data-view="marketing">Marketing</a>
+      <a href="#/produccion" data-view="produccion">Producción</a>
+      <a href="#/stock" data-view="stock">Señales y stock</a>
+      <a href="#/dashboard" data-view="dashboard">Dashboard</a>
+      <a href="#/catalogos" data-view="catalogos">Catálogos</a>
+    </nav>
+    <div class="usuario-badge" id="usuarioBox">
+      <button type="button" class="btn-usuario" id="btnPerfilUsuario" title="Identificarse o cambiar colaborador">
+        <span class="user-avatar" id="usuarioAvatar">👤</span>
+        <div class="user-info">
+          <strong id="usuarioNombre">Sin identificar</strong>
+          <small id="usuarioArea">Toca para ingresar</small>
+        </div>
+      </button>
+    </div>
+  </header>
+
+  <main id="app" class="container" tabindex="-1">
+    <p class="muted">Cargando…</p>
+  </main>
+
+  <dialog id="modal" class="modal">
+    <div class="modal-box">
+      <header class="modal-head">
+        <h2 id="modalTitle"></h2>
+        <button type="button" class="btn ghost icon" data-close aria-label="Cerrar">✕</button>
+      </header>
+      <div id="modalBody" class="modal-body"></div>
+      <footer id="modalFoot" class="modal-foot"></footer>
+    </div>
+  </dialog>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="/vendor/chart.js/chart.umd.min.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+console.log(require('node:crypto').randomBytes(64).toString('hex'));
