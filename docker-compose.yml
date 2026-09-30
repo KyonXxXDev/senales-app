@@ -13,7 +13,7 @@
 services:
 
   # ── Backend Node.js ─────────────────────────────────────────────────────────
-  backend:
+  senales_backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -43,7 +43,7 @@ services:
       - erp-public-network # 👈 Se une a la red compartida con Nginx Proxy Manager
 
   # ── PostgreSQL ───────────────────────────────────────────────────────────────
-  db:
+  senales_db:
     image: postgres:16-alpine
     container_name: senales_db
     restart: unless-stopped
