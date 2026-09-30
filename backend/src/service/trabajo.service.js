@@ -2,8 +2,13 @@ import { tx } from '../config/database.js';
 import { HttpError } from '../utils/http-error.js';
 
 export default class TrabajoService {
-  constructor(trabajoRepository) {
+  /**
+   * @param {import('../repository/trabajo.repository.js').default} trabajoRepository
+   * @param {import('./notificacion.service.js').default} [notificacionService]
+   */
+  constructor(trabajoRepository, notificacionService = null) {
     this.trabajoRepository = trabajoRepository;
+    this.notificacionService = notificacionService;
   }
 
   async obtenerBandeja(area, filtros) {
@@ -53,7 +58,7 @@ export default class TrabajoService {
         d.cantidad_a_producir
       );
 
-      return this.trabajoRepository.insertRegistroTiempo(
+      const registro = await this.trabajoRepository.insertRegistroTiempo(
         {
           id_detalle_pedido,
           id_etapa,
@@ -65,6 +70,13 @@ export default class TrabajoService {
         },
         client
       );
+
+      // Si la sesión ya cierra (fin enviado), sincronizar estado y stock
+      if (fin) {
+        await this._sincronizarConStock(client, id_detalle_pedido, id_etapa);
+      }
+
+      return registro;
     });
   }
 
@@ -83,7 +95,12 @@ export default class TrabajoService {
         reg.cantidad_a_producir
       );
 
-      return this.trabajoRepository.finalizarRegistroTiempo(idRegistro, cantidad, observacion, client);
+      const actualizado = await this.trabajoRepository.finalizarRegistroTiempo(idRegistro, cantidad, observacion, client);
+
+      // Sincronizar estado del área y agregar al stock si aplica
+      await this._sincronizarConStock(client, reg.id_detalle_pedido, reg.id_etapa);
+
+      return actualizado;
     });
   }
 
@@ -155,8 +172,8 @@ export default class TrabajoService {
       params.push(idRegistro);
       const updated = await this.trabajoRepository.updateRegistroTiempo(idRegistro, sets, params, client);
 
-      // Sincronizar estado del área por si la modificación alteró las unidades finales
-      await this.trabajoRepository.sincronizarEstadoArea(reg.id_detalle_pedido, reg.area, client);
+      // Sincronizar estado del área y stock por si la modificación alteró las unidades finales
+      await this._sincronizarConStock(client, reg.id_detalle_pedido, nuevaEtapa);
 
       return updated;
     });
@@ -182,5 +199,51 @@ export default class TrabajoService {
   async obtenerHistorialLinea(idDetalle) {
     return this.trabajoRepository.getHistorialLinea(idDetalle);
   }
-}
 
+  // ────────────────────────────────────────────────────────────────────────────
+  // Helpers internos
+  // ────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Sincroniza el estado del área para una etapa dada y, si la línea acaba de
+   * pasar a TERMINADO, emite una notificación informativa a los colaboradores del área.
+   *
+   * @private
+   */
+  async _sincronizarConStock(client, idDetalle, idEtapa) {
+    // Obtener el área a la que pertenece la etapa
+    const etapa = await this.trabajoRepository.getEtapaInfo(idEtapa, client);
+    if (!etapa) return;
+
+    const { estado, stockIngresado } = await this.trabajoRepository.sincronizarEstadoArea(
+      idDetalle,
+      etapa.area,
+      client
+    );
+
+    // Notificar al área cuando se ingresó stock nuevo
+    if (stockIngresado && this.notificacionService) {
+      try {
+        const colaboradores = await this.trabajoRepository.obtenerColaboradoresPorArea(etapa.area, client);
+        const ids = colaboradores.map((c) => c.id_colaborador);
+        if (ids.length) {
+          // Usar pool directamente (fuera de la tx) para no bloquear si la tabla no existe aún
+          await this.notificacionService.crear(
+            {
+              idColaboradores: ids,
+              tipo: 'INFO',
+              titulo: `✅ Línea terminada — ${etapa.area}`,
+              mensaje: `La línea #${idDetalle} finalizó en ${etapa.area} y sus unidades fueron ingresadas al stock automáticamente.`,
+              url: `/trabajo/bandeja/${etapa.area.toLowerCase()}`,
+            },
+            client
+          );
+        }
+      } catch (notifErr) {
+        console.warn('[TrabajoService] No se pudo crear la notificación de stock:', notifErr.message);
+      }
+    }
+
+    return estado;
+  }
+}

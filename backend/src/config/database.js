@@ -26,21 +26,13 @@ const poolConfig = {
   options: `-c timezone=${PGTZ}`,
 };
 
-export const pool = new Pool(poolConfig);
+export const pool = new Pool({
+  ...poolConfig,
+  max: Number(DB_POOL_MAX || 10),
+  options: `-c timezone=${PGTZ || 'America/Lima'}`,
+});
 
 pool.on('error', (err) => console.error('[pg] error en cliente inactivo:', err.message));
-
-// Verificar conexión al arrancar (solo en desarrollo / producción)
-if (NODE_ENV !== 'test') {
-  pool.connect((err, client, release) => {
-    if (err) {
-      console.error('❌ Error al conectar con PostgreSQL:', err.message);
-    } else {
-      console.info(`✅ PostgreSQL conectado correctamente a "${DB_NAME}", Timezone: ${PGTZ}`);
-      release();
-    }
-  });
-}
 
 /** Ejecuta una consulta directa al pool */
 export const query = (text, params) => pool.query(text, params);
@@ -61,4 +53,16 @@ export async function tx(fn) {
   }
 }
 
-export default pool;
+// Verificar conexión al arrancar (solo en desarrollo / producción)
+if (NODE_ENV !== 'test') {
+  pool.connect((err, client, release) => {
+    if (err) {
+      console.error('❌ Error al conectar con PostgreSQL:', err.message);
+    } else {
+      console.info(`✅ PostgreSQL conectado correctamente a "${DB_NAME}", Timezone: ${PGTZ}`);
+      release();
+    }
+  });
+}
+
+export default { pool, query, tx };

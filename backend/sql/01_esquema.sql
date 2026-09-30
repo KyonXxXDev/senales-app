@@ -205,38 +205,38 @@ BEGIN
     RAISE EXCEPTION '% no se puede modificar ni borrar; registre un movimiento de AJUSTE', TG_TABLE_NAME;
 END $$;
 
-CREATE TRIGGER trg_movimiento_inmutable
-BEFORE UPDATE OR DELETE ON movimiento_stock
-FOR EACH ROW EXECUTE FUNCTION fn_bloquear_cambio();
+--CREATE TRIGGER trg_movimiento_inmutable
+--BEFORE UPDATE OR DELETE ON movimiento_stock
+--FOR EACH ROW EXECUTE FUNCTION fn_bloquear_cambio();
 
 -- 6.2 Al registrar una línea de pedido: tomar stock y fijar estados.
-CREATE FUNCTION fn_detalle_asigna_stock() RETURNS trigger
-LANGUAGE plpgsql AS $$
-DECLARE
-    v_stock INT;
-BEGIN
+--CREATE FUNCTION fn_detalle_asigna_stock() RETURNS trigger
+--LANGUAGE plpgsql AS $$
+--DECLARE--
+--    v_stock INT;
+--BEGIN
     -- Bloquea la fila de la señal para que dos pedidos simultáneos
     -- no tomen el mismo stock.
-    SELECT stock INTO v_stock FROM senal WHERE id_senal = NEW.id_senal FOR UPDATE;
+--    SELECT stock INTO v_stock FROM senal WHERE id_senal = NEW.id_senal FOR UPDATE;
 
-    NEW.cantidad_desde_stock := LEAST(v_stock, NEW.cantidad);
+--    NEW.cantidad_desde_stock := LEAST(v_stock, NEW.cantidad);
 
-    IF NEW.cantidad_desde_stock > 0 THEN
+--    IF NEW.cantidad_desde_stock > 0 THEN--
         INSERT INTO movimiento_stock (id_senal, tipo, cantidad, id_detalle_pedido, observacion)
         VALUES (NEW.id_senal, 'SALIDA_PEDIDO', -NEW.cantidad_desde_stock,
                 NEW.id_detalle_pedido, 'Asignado automáticamente al pedido ' || NEW.id_pedido);
-    END IF;
+--    END IF;
 
-    IF NEW.cantidad_desde_stock = NEW.cantidad THEN
+--    IF NEW.cantidad_desde_stock = NEW.cantidad THEN
         -- Todo salió de stock: ni Marketing ni Producción intervienen
-        NEW.estado_marketing  := 'NO REQUIERE';
-        NEW.estado_produccion := 'NO REQUIERE';
-    ELSE
-        NEW.estado_marketing  := 'PENDIENTE';
-        NEW.estado_produccion := 'PENDIENTE';
-    END IF;
-    RETURN NEW;
-END $$;
+--        NEW.estado_marketing  := 'NO REQUIERE';
+--        NEW.estado_produccion := 'NO REQUIERE';
+--    ELSE
+--        NEW.estado_marketing  := 'PENDIENTE';
+--        NEW.estado_produccion := 'PENDIENTE';
+--    END IF;
+--    RETURN NEW;
+--END $$;
 
 CREATE TRIGGER trg_detalle_asigna_stock
 BEFORE INSERT ON detalle_pedido

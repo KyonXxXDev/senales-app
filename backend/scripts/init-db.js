@@ -5,7 +5,6 @@
  *   npm run db:init -- --demo -> además carga datos de ejemplo
  *   npm run db:init -- --reset [--demo] -> BORRA todo y vuelve a crear
  */
-import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

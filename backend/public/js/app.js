@@ -7,14 +7,16 @@ import trabajo from './views/trabajo.js';
 import stock from './views/stock.js';
 import dashboard from './views/dashboard.js';
 import catalogos from './views/catalogos.js';
+import notificaciones, { actualizarBadge } from './views/notificaciones.js';
 
 const VISTAS = {
   operaciones: (el) => operaciones(el),
-  marketing: (el) => trabajo(el, 'MARKETING'),
-  produccion: (el) => trabajo(el, 'PRODUCCION'),
-  stock: (el) => stock(el),
-  dashboard: (el) => dashboard(el),
-  catalogos: (el) => catalogos(el),
+  marketing:   (el) => trabajo(el, 'MARKETING'),
+  produccion:  (el) => trabajo(el, 'PRODUCCION'),
+  stock:       (el) => stock(el),
+  dashboard:   (el) => dashboard(el),
+  catalogos:   (el) => catalogos(el),
+  notificaciones: (el) => notificaciones(el),
 };
 
 let limpiarVista = null;
@@ -29,6 +31,8 @@ async function navegar() {
   app.innerHTML = '<p class="muted">Cargando…</p>';
   try {
     limpiarVista = await VISTAS[vista](app);
+    // Refrescar badge al entrar en cualquier vista (puede haber llegado una nueva)
+    if (vista !== 'notificaciones') actualizarBadge();
   } catch (e) {
     app.innerHTML = `<div class="card card-body"><strong>No se pudo cargar la vista.</strong><p class="muted">${esc(e.message)}</p></div>`;
   }
@@ -62,9 +66,7 @@ async function iniciar() {
 
   // Si no hay colaborador identificado, mostrar el modal rápido de login
   if (!store.colaborador) {
-    mostrarModalLogin(() => {
-      navegar();
-    });
+    mostrarModalLogin(() => { navegar(); });
   }
 
   // Botón en la barra superior para ver perfil o cambiar colaborador
@@ -108,9 +110,22 @@ async function iniciar() {
     });
   }
 
+  // Botón de notificaciones en el topbar
+  const btnNotif = $('#btnNotificaciones');
+  if (btnNotif) {
+    btnNotif.addEventListener('click', () => {
+      location.hash = '#/notificaciones';
+    });
+  }
+
+  // Polling de badge cada 60 segundos
+  if (store.colaborador) {
+    actualizarBadge();
+    setInterval(actualizarBadge, 60_000);
+  }
+
   window.addEventListener('hashchange', navegar);
   navegar();
 }
 
 document.addEventListener('DOMContentLoaded', iniciar);
-

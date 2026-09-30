@@ -2,6 +2,7 @@ import {
   api, store, esc, fmt, badge, prioridad, progreso, miniatura, abrirModal, cerrarModal,
   confirmar, intentar, toast, options, etiquetaEtapa,
 } from '../core.js';
+import { actualizarBadge } from './notificaciones.js';
 
 /** Modal con el detalle de un pedido. onCambio se llama tras cualquier modificación. */
 export async function verPedido(id, onCambio = () => {}) {
@@ -21,7 +22,12 @@ export async function verPedido(id, onCambio = () => {}) {
       <td>${badge(l.estado_global)}</td>
       <td class="nowrap">
         <button class="btn ghost sm" data-tiempos="${l.id_detalle_pedido}">Tiempos</button>
-        ${entregado ? '' : `<button class="btn ghost sm" data-borrar-linea="${l.id_detalle_pedido}" aria-label="Eliminar línea">Quitar</button>`}
+        ${entregado ? '' : `
+          <button class="btn ghost sm" data-editar-linea="${l.id_detalle_pedido}"
+            data-cant="${l.cantidad}" data-obs="${esc(l.observacion_linea || '')}"
+            title="Editar cantidad u observación">✏️ Editar</button>
+          <button class="btn ghost sm" data-borrar-linea="${l.id_detalle_pedido}" aria-label="Eliminar línea">Quitar</button>
+        `}
       </td>
     </tr>
     <tr class="hidden" id="tiempos-${l.id_detalle_pedido}"><td colspan="9"></td></tr>`).join('');
@@ -72,6 +78,54 @@ export async function verPedido(id, onCambio = () => {}) {
         <td class="num">${fmt.min(r.duracion_min)}</td><td class="num">${r.cantidad_procesada}</td></tr>`).join('')}</tbody></table>`
       : '<p class="muted small">Aún no hay tiempos registrados.</p>';
     fila.classList.remove('hidden');
+  }));
+
+  // ── Editar línea ──────────────────────────────────────────────────────────
+  body.querySelectorAll('[data-editar-linea]').forEach((b) => b.addEventListener('click', () => {
+    const idDetalle = b.dataset.editarLinea;
+    const cantActual = b.dataset.cant;
+    const obsActual  = b.dataset.obs;
+
+    const { body: mBody, foot: mFoot } = abrirModal({
+      titulo: 'Editar línea del pedido',
+      cuerpo: `
+        <p class="hint" style="margin-top:0">
+          ⚠️ Editar la cantidad notificará automáticamente a los colaboradores de Marketing y Producción.
+        </p>
+        <form id="fEditarLinea" class="fields">
+          <label class="field full">
+            Nueva cantidad *
+            <input type="number" name="cantidad" min="1" step="1" value="${esc(cantActual)}" required>
+            <span class="muted small">Cantidad actual: <strong>${esc(cantActual)}</strong></span>
+          </label>
+          <label class="field full">
+            Observación de la línea
+            <textarea name="observacion" maxlength="500" rows="3" placeholder="Opcional…">${esc(obsActual)}</textarea>
+          </label>
+        </form>`,
+      pie: `
+        <button class="btn secondary" data-close>Cancelar</button>
+        <button class="btn primary" id="btnGuardarLinea">Guardar y notificar</button>`,
+      estrecho: true,
+    });
+
+    mFoot.querySelector('#btnGuardarLinea').onclick = async () => {
+      const form = mBody.querySelector('#fEditarLinea');
+      if (!form.reportValidity()) return;
+      const cantidad    = Number(form.cantidad.value);
+      const observacion = form.observacion.value.trim() || null;
+
+      try {
+        await intentar(
+          () => api(`/detalles/${idDetalle}`, { method: 'PATCH', body: { cantidad, observacion } }),
+          'Línea actualizada y notificación enviada.'
+        );
+        cerrarModal();
+        actualizarBadge();
+        onCambio();
+        verPedido(id, onCambio);
+      } catch { /* toast ya disparado */ }
+    };
   }));
 
   body.querySelectorAll('[data-borrar-linea]').forEach((b) => b.addEventListener('click', async () => {

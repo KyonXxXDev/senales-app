@@ -37,12 +37,3 @@ export const SP_CLIENT_SECRET = process.env.CLIENT_SECRET || '';
 export const SP_SITE_ID = process.env.SHAREPOINT_SITE_ID || '';
 export const SP_DRIVE_ID = process.env.SHAREPOINT_DRIVE_ID || '';
 export const SP_FOLDER_GENERAL = process.env.SHAREPOINT_FOLDER_GENERAL || 'Senales';
-
-// Alias para compatibilidad
-export const CLIENT_ID = SP_CLIENT_ID;
-export const TENANT_ID = SP_TENANT_ID;
-export const CLIENT_SECRET = SP_CLIENT_SECRET;
-export const SHAREPOINT_SITE_ID = SP_SITE_ID;
-export const SHAREPOINT_DRIVE_ID = SP_DRIVE_ID;
-export const SHAREPOINT_LIST_ID = process.env.SHAREPOINT_LIST_ID || '';
-export const SHAREPOINT_FOLDER_GENERAL = SP_FOLDER_GENERAL;

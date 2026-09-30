@@ -88,5 +88,31 @@ export default class PedidoController {
     await this.pedidoService.eliminarLinea(id);
     res.status(204).end();
   };
+
+  /**
+   * PATCH /detalles/:id
+   * Edita una línea de pedido en curso (cantidad, observacion_linea).
+   * Notifica automáticamente a Marketing y Producción.
+   */
+  updateLinea = async (req, res) => {
+    const id = int(req.params.id, 'id');
+    console.log(req.body)
+    const fields = {};
+
+    if (req.body.cantidad !== undefined) {
+      fields.cantidad = int(req.body.cantidad, 'cantidad', { min: 1 });
+    }
+    if (req.body.observacion !== undefined) {
+      fields.observacion = str(req.body.observacion, 'observacion', { required: false, max: 2000 });
+    }
+
+    const idColaborador =
+      int(req.body.id_colaborador_solicita, 'id_colaborador_solicita', { required: false }) ||
+      req.user?.id_colaborador ||
+      null;
+
+    const linea = await this.pedidoService.actualizarLinea(id, fields, idColaborador);
+    res.json(linea);
+  };
 }
 

@@ -27,6 +27,7 @@ import PedidoService from '../service/pedido.service.js';
 import TrabajoService from '../service/trabajo.service.js';
 import KpiService from '../service/kpi.service.js';
 import SharepointService from '../service/sharepoint.service.js';
+import NotificacionService from '../service/notificacion.service.js';
 
 // Controllers
 import AuthController from '../controller/auth.controller.js';
@@ -66,8 +67,9 @@ export function createModules(db = pool) {
   const catalogoService = new CatalogoService(catalogoRepository);
   const sharepointService = new SharepointService({ repository: sharepointRepository });
   const senalService = new SenalService(senalRepository, sharepointService);
-  const pedidoService = new PedidoService(pedidoRepository, senalRepository);
-  const trabajoService = new TrabajoService(trabajoRepository);
+  const notificacionService = new NotificacionService(db);
+  const pedidoService = new PedidoService(pedidoRepository, senalRepository, notificacionService);
+  const trabajoService = new TrabajoService(trabajoRepository, notificacionService);
   const kpiService = new KpiService(kpiRepository);
 
   // 3. Controladores
@@ -111,6 +113,7 @@ export function createModules(db = pool) {
       trabajo: trabajoService,
       kpi: kpiService,
       sharepoint: sharepointService,
+      notificacion: notificacionService,
     },
     controllers: {
       auth: authController,

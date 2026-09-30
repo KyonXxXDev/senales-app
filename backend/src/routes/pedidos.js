@@ -12,6 +12,9 @@ router.patch('/pedidos/:id', ah(pedido.update));
 router.post('/pedidos/:id/lineas', ah(pedido.agregarLinea));
 router.post('/pedidos/:id/entregar', ah(pedido.marcarEntregado));
 router.delete('/pedidos/:id', ah(pedido.deletePedido));
+
+// Líneas de detalle
+router.patch('/detalles/:id', ah(pedido.updateLinea));  // editar línea + notificación
 router.delete('/detalles/:id', ah(pedido.deleteLinea));
 
 export default router;

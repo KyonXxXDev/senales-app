@@ -8,6 +8,7 @@ import senalesRouter from './senales.js';
 import pedidosRouter from './pedidos.js';
 import trabajoRouter from './trabajo.js';
 import kpisRouter from './kpis.js';
+import notificacionesRouter from './notificaciones.js';
 
 const api = Router();
 
@@ -33,6 +34,7 @@ api.use(senalesRouter);
 api.use(pedidosRouter);
 api.use(trabajoRouter);
 api.use(kpisRouter);
+api.use(notificacionesRouter);
 
 // 404 para cualquier ruta de /api no coincidente
 api.use((req, res) => res.status(404).json({ error: 'Ruta de API no encontrada.' }));

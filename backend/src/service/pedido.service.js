@@ -3,10 +3,17 @@ import { HttpError } from '../utils/http-error.js';
 import { int, str, num } from '../utils/validators.js';
 
 export default class PedidoService {
-  constructor(pedidoRepository, senalRepository) {
+  /**
+   * @param {import('../repository/pedido.repository.js').default} pedidoRepository
+   * @param {import('../repository/senal.repository.js').default} senalRepository
+   * @param {import('./notificacion.service.js').default} [notificacionService]
+   */
+  constructor(pedidoRepository, senalRepository, notificacionService = null) {
     this.pedidoRepository = pedidoRepository;
     this.senalRepository = senalRepository;
+    this.notificacionService = notificacionService;
   }
+
 
   async obtenerPedidos(filtros) {
     return this.pedidoRepository.findAll(filtros);
@@ -152,6 +159,87 @@ export default class PedidoService {
       await this.pedidoRepository.deleteDetalle(idDetalle, client);
     });
     return true;
+  }
+
+  /**
+   * Edita los campos de una línea de detalle de pedido en curso.
+   * Si se modifica la cantidad, recalcula cantidad_a_producir según el stock disponible.
+   * Emite una notificación a los colaboradores de Marketing y Producción informando el cambio.
+   *
+   * @param {number} idDetalle
+   * @param {{ cantidad?: number, observacion?: string }} fields
+   * @param {number|null} [idColaboradorSolicita]  - Quién realiza el cambio (para el mensaje)
+   */
+  async actualizarLinea(idDetalle, fields, idColaboradorSolicita = null) {
+    const resultado = await tx(async (client) => {
+      // Bloquear la línea y el pedido padre
+      const lock = await this.pedidoRepository.getDetallePedidoWithPedidoLock(idDetalle, client);
+      if (!lock) throw new HttpError(404, 'Línea de pedido no encontrada.');
+      if (lock.fecha_entrega) throw new HttpError(409, 'El pedido ya fue entregado y no se puede editar.');
+
+      const sets = [];
+      const params = [];
+
+      if (fields.cantidad !== undefined) {
+        const nuevaCantidad = int(fields.cantidad, 'cantidad', { min: 1 });
+        // Consultar stock actual de la señal
+        const { rows: stockRows } = await client.query(
+          `SELECT s.stock, d.id_senal, d.cantidad_desde_stock
+             FROM detalle_pedido d
+             JOIN senal s ON s.id_senal = d.id_senal
+            WHERE d.id_detalle_pedido = $1`,
+          [idDetalle]
+        );
+        if (!stockRows.length) throw new HttpError(404, 'Señal asociada a la línea no encontrada.');
+        const stockActual = Number(stockRows[0].stock || 0);
+        // Reasignar stock disponible con la nueva cantidad pedida
+        const desdStock = Math.min(nuevaCantidad, stockActual);
+
+        params.push(nuevaCantidad); sets.push(`cantidad = $${params.length}`);
+        params.push(desdStock);     sets.push(`cantidad_desde_stock = $${params.length}`);
+        // cantidad_a_producir = GENERATED AS (cantidad - cantidad_desde_stock) → se actualiza sola
+      }
+
+      if (fields.observacion !== undefined) {
+        params.push(str(fields.observacion, 'observacion', { required: false, max: 2000 }));
+        sets.push(`observacion_linea = $${params.length}`);
+      }
+
+      if (!sets.length) throw new HttpError(400, 'No hay campos para actualizar.');
+
+      params.push(idDetalle);
+      const { rows } = await client.query(
+        `UPDATE detalle_pedido SET ${sets.join(', ')} WHERE id_detalle_pedido = $${params.length} RETURNING *`,
+        params
+      );
+      return rows[0];
+    });
+
+    // ── Notificar a Marketing y Producción ───────────────────────────────────
+    if (this.notificacionService) {
+      try {
+        const { rows: colabs } = await this.pedidoRepository.db.query(
+          `SELECT id_colaborador FROM colaborador
+            WHERE activo = TRUE AND area IN ('MARKETING', 'PRODUCCION')`
+        );
+        const ids = colabs.map((c) => c.id_colaborador);
+        const cambios = Object.entries(fields)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(', ');
+
+        await this.notificacionService.crear({
+          idColaboradores: ids,
+          tipo: 'ALERTA',
+          titulo: '✏️ Línea de pedido editada',
+          mensaje: `La línea #${idDetalle} del pedido fue modificada. Cambios: ${cambios}.`,
+          url: `/pedidos/${resultado.id_pedido}`,
+        });
+      } catch (err) {
+        console.warn('[PedidoService] No se pudo notificar la edición de línea:', err.message);
+      }
+    }
+
+    return this.pedidoRepository.findDetalleById(idDetalle);
   }
 }
 

@@ -150,38 +150,101 @@ export default class TrabajoRepository {
 
   /**
    * Recalcula el estado de un área para una línea tras editar o borrar sesiones de tiempo.
+   * Si la línea alcanza TERMINADO, inserta automáticamente un movimiento de ENTRADA en stock
+   * (solo si no existe ya uno por esta combinación detalle+área para evitar duplicados).
+   *
+   * @returns {{ estado: string, stockIngresado: boolean }}
    */
   async sincronizarEstadoArea(idDetalle, area, client = this.db) {
     const col = area === 'MARKETING' ? 'estado_marketing' : 'estado_produccion';
-    
-    // Contar total de sesiones abiertas o cerradas y unidades en etapa final
+
+    // Obtener sesiones y unidades en etapa final junto con el estado actual
     const { rows: conteo } = await client.query(
       `SELECT COUNT(*) AS total_sesiones,
               COALESCE(SUM(CASE WHEN e.es_final AND r.fin IS NOT NULL THEN r.cantidad_procesada ELSE 0 END), 0) AS hechas,
-              (SELECT cantidad_a_producir FROM detalle_pedido WHERE id_detalle_pedido = $1) AS meta
-         FROM registro_tiempo r
-         JOIN etapa e ON e.id_etapa = r.id_etapa
-        WHERE r.id_detalle_pedido = $1 AND e.area = $2`,
+              d.cantidad_a_producir AS meta,
+              d.${col} AS estado_actual,
+              d.id_senal,
+              d.id_pedido
+         FROM detalle_pedido d
+         LEFT JOIN registro_tiempo r ON r.id_detalle_pedido = d.id_detalle_pedido
+         LEFT JOIN etapa e ON e.id_etapa = r.id_etapa AND e.area = $2
+        WHERE d.id_detalle_pedido = $1
+        GROUP BY d.id_detalle_pedido, d.cantidad_a_producir, d.${col}, d.id_senal, d.id_pedido`,
       [idDetalle, area]
     );
 
-    const totalSesiones = Number(conteo[0]?.total_sesiones || 0);
-    const hechas = Number(conteo[0]?.hechas || 0);
-    const meta = Number(conteo[0]?.meta || 0);
+    if (!conteo.length) return { estado: 'PENDIENTE', stockIngresado: false };
+
+    const { total_sesiones, hechas, meta, estado_actual, id_senal, id_pedido } = conteo[0];
+    const totalSesiones = Number(total_sesiones || 0);
+    const unidadesHechas = Number(hechas || 0);
+    const metaNum = Number(meta || 0);
 
     let nuevoEstado = 'PENDIENTE';
-    if (hechas >= meta && meta > 0) {
+    if (unidadesHechas >= metaNum && metaNum > 0) {
       nuevoEstado = 'TERMINADO';
     } else if (totalSesiones > 0) {
       nuevoEstado = 'EN PROCESO';
     }
 
+    // Actualizar estado del área (solo si no es NO REQUIERE)
     await client.query(
       `UPDATE detalle_pedido SET ${col} = $1 WHERE id_detalle_pedido = $2 AND ${col} <> 'NO REQUIERE'`,
       [nuevoEstado, idDetalle]
     );
 
-    return nuevoEstado;
+    // ── Ingresar al stock cuando recién se alcanza TERMINADO ──────────────────
+    let stockIngresado = false;
+    if (nuevoEstado === 'TERMINADO' && estado_actual !== 'TERMINADO' && unidadesHechas > 0) {
+      // Verificar que no exista ya un movimiento de stock para este detalle+área
+      const { rows: existe } = await client.query(
+        `SELECT 1 FROM movimiento_stock
+          WHERE id_detalle_pedido = $1 AND origen_area = $2 AND tipo = 'ENTRADA'
+          LIMIT 1`,
+        [idDetalle, area]
+      );
+
+      if (!existe.length) {
+        await client.query(
+          `INSERT INTO movimiento_stock
+             (id_senal, tipo, cantidad, id_detalle_pedido, origen_area, observacion)
+           VALUES ($1, 'ENTRADA', $2, $3, $4, $5)`,
+          [
+            id_senal,
+            unidadesHechas,
+            idDetalle,
+            area,
+            `Producción terminada — área ${area} — pedido #${id_pedido}`,
+          ]
+        );
+        stockIngresado = true;
+        console.info(
+          `[Stock] +${unidadesHechas} uds → señal #${id_senal} | detalle #${idDetalle} | área ${area} | pedido #${id_pedido}`
+        );
+      }
+    }
+
+    // ── Recalcular estado_global del detalle ─────────────────────────────────
+    // Nota: estado_global es una columna GENERATED ALWAYS AS en PostgreSQL;
+    // se recalcula automáticamente al actualizar estado_marketing / estado_produccion.
+    // No es necesario un UPDATE adicional.
+
+    return { estado: nuevoEstado, stockIngresado };
+  }
+
+  /**
+   * Devuelve los colaboradores activos de un área para notificaciones.
+   * @param {'MARKETING'|'PRODUCCION'} area
+   * @param {object} [client]
+   */
+  async obtenerColaboradoresPorArea(area, client = this.db) {
+    const { rows } = await client.query(
+      `SELECT id_colaborador, nombre, email FROM colaborador
+        WHERE activo = TRUE AND area = $1`,
+      [area]
+    );
+    return rows;
   }
 }
 

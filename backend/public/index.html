@@ -18,20 +18,29 @@
     </div>
     <nav class="tabs" id="tabs" aria-label="Secciones">
       <a href="#/operaciones" data-view="operaciones">Operaciones</a>
-      <a href="#/marketing" data-view="marketing">Marketing</a>
-      <a href="#/produccion" data-view="produccion">Producción</a>
-      <a href="#/stock" data-view="stock">Señales y stock</a>
-      <a href="#/dashboard" data-view="dashboard">Dashboard</a>
-      <a href="#/catalogos" data-view="catalogos">Catálogos</a>
+      <a href="#/marketing"   data-view="marketing">Marketing</a>
+      <a href="#/produccion"  data-view="produccion">Producción</a>
+      <a href="#/stock"       data-view="stock">Señales y stock</a>
+      <a href="#/dashboard"   data-view="dashboard">Dashboard</a>
+      <a href="#/catalogos"   data-view="catalogos">Catálogos</a>
     </nav>
-    <div class="usuario-badge" id="usuarioBox">
-      <button type="button" class="btn-usuario" id="btnPerfilUsuario" title="Identificarse o cambiar colaborador">
-        <span class="user-avatar" id="usuarioAvatar">👤</span>
-        <div class="user-info">
-          <strong id="usuarioNombre">Sin identificar</strong>
-          <small id="usuarioArea">Toca para ingresar</small>
-        </div>
+    <div class="topbar-right">
+      <!-- Botón de notificaciones con badge -->
+      <button type="button" class="btn-notif" id="btnNotificaciones"
+              title="Notificaciones" aria-label="Ver notificaciones">
+        🔔
+        <span class="notif-badge" id="notifBadge" style="display:none"></span>
       </button>
+      <!-- Perfil de usuario -->
+      <div class="usuario-badge" id="usuarioBox">
+        <button type="button" class="btn-usuario" id="btnPerfilUsuario" title="Identificarse o cambiar colaborador">
+          <span class="user-avatar" id="usuarioAvatar">👤</span>
+          <div class="user-info">
+            <strong id="usuarioNombre">Sin identificar</strong>
+            <small id="usuarioArea">Toca para ingresar</small>
+          </div>
+        </button>
+      </div>
     </div>
   </header>
 

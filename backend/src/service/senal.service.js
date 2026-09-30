@@ -148,5 +148,85 @@ export default class SenalService {
       observacion,
     });
   }
+
+  obtenerFoto = async ({ id }) => {
+    const senal = await this.senalRepository.findById({ id });
+    if (!senal) return null;
+
+    if (!senal.photo_url) return null;
+
+    const rawPhotoUrl = String(senal.photo_url).trim();
+
+    // Si ya es un data URI o base64
+    if (rawPhotoUrl.startsWith('data:')) {
+      const matches = rawPhotoUrl.match(/^data:([A-Za-z-+]+);base64,(.+)$/);
+      if (matches && matches?.length === 3) {
+        return {
+          buffer: Buffer.from(matches[2], 'base64'),
+          contentType: matches[1]
+        };
+      }
+    }
+    // Si es un archivo local en uploads
+    const normalizedPath = rawPhotoUrl.replace(/\\/g, '/');
+    if (normalizedPath.startsWith('/uploads/') || normalizedPath.startsWith('uploads/')) {
+      const cleanRelPath = normalizedPath.replace(/^\/?uploads\/?/, '');
+      const localFullPath = path.join(process.cwd(), 'uploads', cleanRelPath);
+      if (fs.existsSync(localFullPath)) {
+        const buffer = fs.readFileSync(localFullPath);
+        const ext = path.extname(localFullPath).toLowerCase();
+        const mimeMap = {
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.png': 'image/png',
+          '.webp': 'image/webp'
+        };
+        return {
+          buffer,
+          contentType: mimeMap[ext] || 'image/jpeg'
+        };
+      }
+    }
+
+    // Si es una URL remota http/https directa que no es SharePoint
+    if ((normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) && !normalizedPath.includes('sharepoint.com')) {
+      try {
+        const fetchRes = await fetch(normalizedPath);
+        if (fetchRes.ok) {
+          const arrBuf = await fetchRes.arrayBuffer();
+          return {
+            buffer: Buffer.from(arrBuf),
+            contentType: fetchRes.headers.get('content-type') || 'image/jpeg'
+          };
+        }
+      } catch (err) {
+        console.warn('Error fetching photo from remote URL:', err.message);
+      }
+    }
+
+    // Si la foto está en SharePoint, obtenerla con Graph API
+    try {
+      const folderPath = `/RRHH/${empData.code || empData.id || id}/Fotos`;
+      const photosFolder = await this.sharepointService.ensureFolderPath(folderPath);
+      if (photosFolder && photosFolder.id) {
+        const children = await this.sharepointService.getChildren({ folderId: photosFolder.id });
+        if (children && children.length > 0) {
+          // Filtrar solo archivos y ordenar por fecha de modificación descendente (el más reciente primero)
+          const validFiles = children.filter(item => !item.folder);
+          validFiles.sort((a, b) => {
+            const timeA = new Date(a.lastModifiedDateTime || a.createdDateTime || 0).getTime();
+            const timeB = new Date(b.lastModifiedDateTime || b.createdDateTime || 0).getTime();
+            return timeB - timeA;
+          });
+          const photoItem = validFiles[0] || children[0];
+          return await this.sharepointService.getFileContent({ fileId: photoItem.id });
+        }
+      }
+    } catch (err) {
+      console.error('Error al obtener foto desde SharePoint:', err.message);
+    }
+
+    return null;
+  };
 }
 
