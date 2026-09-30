@@ -21,15 +21,15 @@ services:
     container_name: senales_backend
     restart: unless-stopped
     ports:
-      - "${PORT:-9000}:9000"
+      - "${PORT:-9001}:9001"
     environment:
       NODE_ENV: production
-      PORT: 9000
+      PORT: 9001
       APP_TIMEZONE: America/Lima
 
       # PostgreSQL (apunta al servicio interno en compose; en Azure usa Azure DB for PostgreSQL)
       DB_HOST: ${DB_HOST:-db}
-      DB_PORT: ${DB_PORT:-5432}
+      DB_PORT: ${DB_PORT:-5433}
       DB_NAME: ${DB_NAME:-senales}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -75,7 +75,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "${PGEXPOSE_PORT:-5432}:5432"     # Solo en dev; eliminar en producción Azure
+      - "${PGEXPOSE_PORT:-5433}:5433"     # Solo en dev; eliminar en producción Azure
     networks:
       - senales_net
     healthcheck:

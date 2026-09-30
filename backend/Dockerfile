@@ -45,11 +45,11 @@ RUN mkdir -p public && chown senales:senales public
 USER senales
 
 # Puerto expuesto (se puede sobreescribir con PORT env)
-EXPOSE 9000
+EXPOSE 9001
 
 # Variables de entorno mínimas con defaults seguros
 ENV NODE_ENV=production \
-    PORT=9000 \
+    PORT=9001 \
     APP_TIMEZONE=America/Lima
 
 # Health-check para Azure Container Apps / ACI

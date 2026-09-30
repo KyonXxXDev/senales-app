@@ -5,11 +5,11 @@ services:
     build: .
     container_name: senales_app
     ports:
-      - "9000:9000"
+      - "9001:9001"
     environment:
       - NODE_ENV=production
       - DB_HOST=db
-      - DB_PORT=5432
+      - DB_PORT=5433
       - DB_NAME=senales
       - DB_USER=postgres
       - DB_PASSWORD=postgres_password
@@ -25,7 +25,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres_password
     ports:
-      - "5432:5432"
+      - "5433:5433"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
