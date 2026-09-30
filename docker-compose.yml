@@ -1,0 +1,95 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  docker-compose.yml — NexusSign completo (backend + PostgreSQL)
+#  Para despliegue en Azure App Service (Linux) o Azure Container Instances.
+#
+#  Uso local:
+#    docker compose up --build
+#
+#  Uso en Azure (ACR + App Service):
+#    az acr build --registry <REGISTRY> --image senales-backend:latest ./backend
+#    Luego apuntar el App Service al ACR.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Backend Node.js ─────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend          # Dockerfile está en ./backend
+      dockerfile: Dockerfile
+    image: senales-backend:latest
+    container_name: senales_backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-9000}:9000"
+    environment:
+      NODE_ENV: production
+      PORT: 9000
+      APP_TIMEZONE: America/Lima
+
+      # PostgreSQL (apunta al servicio interno en compose; en Azure usa Azure DB for PostgreSQL)
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-senales}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+
+      # JWT
+      SECRET_KEY: ${SECRET_KEY}
+      REFRESH_SECRET_KEY: ${REFRESH_SECRET_KEY}
+
+      # CORS
+      ACCEPTED_ORIGINS: ${ACCEPTED_ORIGINS:-}
+
+      # SharePoint / Microsoft Graph
+      CLIENT_ID: ${SP_CLIENT_ID:-}
+      TENANT_ID: ${SP_TENANT_ID:-}
+      CLIENT_SECRET: ${SP_CLIENT_SECRET:-}
+      SHAREPOINT_SITE_ID: ${SP_SITE_ID:-}
+      SHAREPOINT_DRIVE_ID: ${SP_DRIVE_ID:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - senales_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9000/api/salud"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  # En producción real con Azure, reemplazar este servicio por
+  # Azure Database for PostgreSQL Flexible Server y eliminar este bloque.
+  db:
+    image: postgres:16-alpine
+    container_name: senales_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-senales}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGTZ: America/Lima
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${PGEXPOSE_PORT:-5432}:5432"     # Solo en dev; eliminar en producción Azure
+    networks:
+      - senales_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-senales}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ── Volúmenes ────────────────────────────────────────────────────────────────
+volumes:
+  pgdata:
+    driver: local
+
+# ── Redes ────────────────────────────────────────────────────────────────────
+networks:
+  senales_net:
+    driver: bridge
