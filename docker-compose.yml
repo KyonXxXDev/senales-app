@@ -37,7 +37,7 @@ services:
       REFRESH_SECRET_KEY: ${REFRESH_SECRET_KEY}
       ACCEPTED_ORIGINS: ${ACCEPTED_ORIGINS:-}
     depends_on:
-      db:
+      senales_db:
         condition: service_healthy
     networks:
       - erp-public-network # 👈 Se une a la red compartida con Nginx Proxy Manager
