@@ -8,26 +8,14 @@ services:
     container_name: senales_backend
     restart: unless-stopped
     env_file:
-      - .env
-    environment:
-      NODE_ENV: production
-      PORT: 9001
-      APP_TIMEZONE: America/Lima
-      DB_HOST: erp-postgres   # 👈 Apunta al servidor central del ERP
-      DB_PORT: 5432
-      DB_NAME: senales_db     # 👈 La base de datos que vivirá en el servidor central
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_POOL_MAX: 10
-      SECRET_KEY: ${SECRET_KEY}
-      REFRESH_SECRET_KEY: ${REFRESH_SECRET_KEY}
-      SHAREPOINT_DRIVE_ID: ${SHAREPOINT_DRIVE_ID}
-      SHAREPOINT_SITE_ID: ${SHAREPOINT_SITE_ID}
+      - ../core-database/envs/senales.env
     expose:
-      - "9001" # Expuesto para Nginx Proxy Manager
+      - "9001"
     networks:
-      - erp-public-network # 👈 Se conecta a la red compartida para alcanzar a erp-postgres
-
+      - public-network
+      - core-internal
 networks:
-  erp-public-network:
+  core-internal:
+    external: true
+  public-network:
     external: true
