@@ -1,0 +1,32 @@
+{
+  "name": "senales-pedidos",
+  "version": "2.0.0",
+  "description": "Señalética: pedidos de señales (Operaciones, Marketing, Producción) — microservicio integrable al ERP de RRHH e Inventario",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "build": "node scripts/build-front.mjs",
+    "db:init": "node scripts/init-db.js",
+    "db:migrate": "node scripts/init-db.js --migrate",
+    "db:demo": "node scripts/init-db.js --reset --demo"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "dotenv": "^18.0.3",
+    "express": "^5.2.1",
+    "multer": "^2.4.0",
+    "pg": "^8.23.0"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "daisyui": "^5.7.50",
+    "lucide": "^1.61.0",
+    "tailwindcss": "^4.3.3"
+  }
+}

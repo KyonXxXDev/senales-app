@@ -1,0 +1,24 @@
+--- a/frontend/nginx.conf
++++ b/frontend/nginx.conf
+@@ -26,6 +26,21 @@
+         proxy_read_timeout 300s;
+     }
+ 
++    # ── Señalética (microservicio) ─────────────────────────────────────────
++    # Mismo dominio que el ERP: comparte la cookie de sesión access_token.
++    location = /senales {
++        return 301 /senales/;
++    }
++    location /senales/ {
++        proxy_pass http://senales:9001/;
++        client_max_body_size 20M;
++        proxy_set_header Host $host;
++        proxy_set_header X-Real-IP $remote_addr;
++        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
++        proxy_set_header X-Forwarded-Proto $scheme;
++        proxy_read_timeout 120s;
++    }
++
+     # Proxy para protocolo ADMS/PUSH de ZKTeco (MB10-VL)
+     location /iclock/ {
+         # OPCIÓN A: Si tu backend recibe directamente en /api/v1/iclock/

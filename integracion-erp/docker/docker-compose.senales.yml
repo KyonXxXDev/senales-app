@@ -1,0 +1,34 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  Servicio Señalética para el docker-compose del ERP.
+#  Copia este bloque dentro de "services:" del docker-compose.yml del ERP
+#  (o úsalo como override:  docker compose -f docker-compose.yml -f docker-compose.senales.yml up -d)
+# ─────────────────────────────────────────────────────────────────────────────
+services:
+  senales:
+    build:
+      context: ../senales            # carpeta donde está este proyecto
+      dockerfile: Dockerfile
+    container_name: senales
+    env_file:
+      - ../core-database/envs/senales.env
+    expose:
+      - "9001"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      - erp-backend
+    networks:
+      - core-internal    # PostgreSQL y backend del ERP
+      - public-network   # nginx del frontend del ERP
+
+networks:
+  core-internal:
+    external: true
+  public-network:
+    external: true

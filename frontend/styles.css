@@ -1,0 +1,41 @@
+/* Tailwind CSS 4 + DaisyUI 5 — mismo stack y temas que el ERP (themes: all).
+   El tema activo se toma de localStorage("theme"), la misma clave que usa el ERP. */
+@import "tailwindcss" source(none);
+@source "../public/index.html";
+@source "../public/js";
+@plugin "daisyui" {
+  themes: all;
+}
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body { @apply bg-base-200 text-base-content min-h-screen; }
+
+/* Miniatura de la señal */
+.thumb {
+  @apply size-11 shrink-0 rounded-box object-cover bg-base-200 border border-base-300
+         inline-grid place-items-center text-base-content/40;
+}
+.thumb-lg { @apply size-20; }
+
+/* Cronómetro de sesiones en curso */
+.timer { font-variant-numeric: tabular-nums; @apply font-semibold text-primary; }
+.num { font-variant-numeric: tabular-nums; @apply text-right; }
+
+/* Contenedor de gráficos */
+.chart-box { position: relative; height: 260px; }
+
+/* En el iframe del ERP: sin márgenes extra y la barra superior más compacta */
+html[data-embebido] body { @apply bg-base-100; }
+html[data-embebido] .solo-independiente { display: none !important; }
+
+/* Pestañas desplazables en pantallas pequeñas */
+.tabs-scroll { overflow-x: auto; scrollbar-width: none; }
+.tabs-scroll::-webkit-scrollbar { display: none; }
+
+/* Animación suave al cambiar de vista */
+.vista-entra { animation: vistaEntra .18s ease-out; }
+@keyframes vistaEntra { from { opacity: 0; transform: translateY(4px); } }

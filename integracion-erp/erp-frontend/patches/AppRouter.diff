@@ -1,0 +1,20 @@
+--- a/frontend/src/routes/AppRouter.jsx
++++ b/frontend/src/routes/AppRouter.jsx
+@@ -39,6 +39,7 @@
+ import AreaKanbanPage from '../features/recursos-humanos/pages/AreaKanbanPage';
+ import { PlanillaPage } from '../features/planilla';
+ import InventoryPage from '../features/inventory/pages/InventoryPage';
++import { SenaleticaPage } from '../features/senaletica';
+ 
+ export function AppRouter() {
+   const { authUser, isCheckingAuth } = useContext(AuthContext);
+@@ -132,6 +133,9 @@
+           <Route path="alerts" element={<AlertsPage />} />
+         </Route>
+ 
++        {/* SEÑALÉTICA (microservicio embebido) */}
++        <Route path="senaletica" element={<SenaleticaPage />} />
++
+         {/* REPORTES */}
+         <Route path="reports" element={<PlaceholderPage />} />
+ 

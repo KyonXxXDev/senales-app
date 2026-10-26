@@ -1,0 +1,26 @@
+--- a/frontend/src/components/layout/Sidebar.jsx
++++ b/frontend/src/components/layout/Sidebar.jsx
+@@ -6,7 +6,7 @@
+     Warehouse, ArrowLeftRight, Truck, Bell, History, Clock, AlertTriangle,
+     ClipboardList, Palmtree, Hospital, TrendingUp, FileText, HardHat,
+     GraduationCap, Network, Settings, CalendarDays, ShieldCheck, DollarSign, X,
+-    Briefcase, Box
++    Briefcase, Box, Signpost
+ } from "lucide-react";
+ import { AuthContext } from "../../context/AuthContext";
+ import { ROLES, normalizeRole } from "../../consts";
+@@ -104,6 +104,14 @@
+             ]
+         },
+         {
++            section: "Producción",
++            roles: Object.values(ROLES),
++            items: [
++                // Microservicio Señalética (pedidos de señales: Operaciones, Marketing y Producción)
++                { label: "Señalética", route: "/senaletica", icon: Signpost }
++            ]
++        },
++        {
+             section: "Administración",
+             roles: [ROLES.ADMIN, ROLES.TI, ROLES.GERENTE, ROLES.CONTABILIDAD],
+             items: [
